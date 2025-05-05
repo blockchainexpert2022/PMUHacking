@@ -23,25 +23,24 @@ def calculer_mises(cotes, gain_cible):
 
     if gain_cible <= 0:
         return [], 0.0, 0.0, "Le gain cible doit être un nombre positif."
+    
+    if not cotes: # Gérer le cas où aucune cote n'a été entrée
+        return [], 0.0, 0.0, "Aucune cote de cheval n'a été entrée."
 
     for i, cote in enumerate(cotes):
-        if cote <= 0:
-            erreur = f"La cote du cheval {i + 1} est invalide ({cote}). Elle doit être supérieure à 0."
-            break
+        # On a déjà validé que les cotes entrées sont > 0 lors de la saisie
         mise_cheval = gain_cible / cote
         mises.append(mise_cheval)
         mise_totale += mise_cheval
-
-    if erreur:
-        return [], 0.0, 0.0, erreur
 
     profit_theorique = gain_cible - mise_totale
 
     return mises, mise_totale, profit_theorique, None
 
-def afficher_resultats(mises, mise_totale, profit_theorique, gain_cible):
+def afficher_resultats(mises, mise_totale, profit_theorique, gain_cible, nb_chevaux):
     """Affiche les résultats du calcul des mises."""
     print("\n--- Résultats de la Répartition des Mises ---")
+    print(f"Nombre de chevaux considérés : {nb_chevaux}")
     print(f"Gain cible souhaité : {gain_cible:.2f} €")
     print("-" * 38)
     for i, mise in enumerate(mises):
@@ -59,13 +58,14 @@ def afficher_resultats(mises, mise_totale, profit_theorique, gain_cible):
 
 # --- Boucle principale du script ---
 if __name__ == "__main__":
-    cotes = [0.0] * 8 # Initialise une liste pour 8 chevaux
+    cotes = [] # Liste vide pour les cotes
     gain_cible = 0.0
     premier_calcul = True
+    nb_chevaux = 0
 
     print("--- Calcul de Répartition des Mises (Jeu Simple Gagnant) ---")
-    print("Entrez les rapports probables (cotes pour 1€) et votre gain cible.")
-    print("Le script calculera la mise nécessaire sur chaque cheval.")
+    print("Entrez les rapports probables (cotes pour 1€) pour chaque cheval.")
+    print("Entrez 0 pour arrêter la saisie des cotes.")
 
     while True:
         if premier_calcul:
@@ -81,21 +81,34 @@ if __name__ == "__main__":
                 except ValueError:
                     print("Entrée invalide. Veuillez entrer un nombre (par exemple, 500 ou 150.5).")
 
-            # Demander les cotes initiales pour les 8 chevaux
-            print("\nEntrez les cotes probables pour chaque cheval (par exemple, 3.5 ou 12.0).")
-            for i in range(8):
+            # Demander les cotes pour un nombre indéfini de chevaux
+            print("\nEntrez les cotes probables (par exemple, 3.5 ou 12.0). Entrez 0 pour terminer.")
+            cotes = [] # Réinitialiser la liste des cotes
+            i = 0
+            while True:
+                i += 1
                 while True:
                     try:
-                        cote_input = input(f"Cote probable pour le cheval {i + 1} : ").replace(',', '.')
+                        cote_input = input(f"Cote probable pour le cheval {i} : ").replace(',', '.')
                         cote = float(cote_input)
-                        if cote <= 0:
-                             print("Veuillez entrer une cote positive.")
+                        if cote == 0:
+                            break # Sortie de la boucle de saisie des cotes
+                        if cote < 0:
+                             print("Veuillez entrer une cote positive ou 0 pour terminer.")
                         else:
-                            cotes[i] = cote
-                            break
+                            cotes.append(cote)
+                            break # Sortie de la boucle de validation de la cote
                     except ValueError:
                         print("Entrée invalide. Veuillez entrer un nombre pour la cote (par exemple, 4.2).")
-            premier_calcul = False
+                if cote == 0:
+                    break # Sortie de la boucle de saisie des chevaux
+
+            nb_chevaux = len(cotes) # Mettre à jour le nombre de chevaux
+            if nb_chevaux == 0:
+                 print("Aucune cote de cheval n'a été entrée. Nouveau calcul.")
+                 continue # Revenir au début de la boucle principale pour redemander le gain cible
+                 
+            premier_calcul = False # La première saisie est terminée
 
         # Effectuer le calcul
         mises, mise_totale, profit_theorique, erreur = calculer_mises(cotes, gain_cible)
@@ -104,7 +117,7 @@ if __name__ == "__main__":
         if erreur:
             print(f"\nErreur de calcul : {erreur}")
         else:
-            afficher_resultats(mises, mise_totale, profit_theorique, gain_cible)
+            afficher_resultats(mises, mise_totale, profit_theorique, gain_cible, nb_chevaux)
 
         # Demander à l'utilisateur ce qu'il veut faire ensuite
         print("\nOptions :")
@@ -119,19 +132,24 @@ if __name__ == "__main__":
             break
         elif choix == 'n':
             premier_calcul = True # Recommence tout
-            cotes = [0.0] * 8
+            cotes = []
             gain_cible = 0.0
+            nb_chevaux = 0
         elif choix == 'm':
+            if nb_chevaux == 0:
+                print("Aucune cote n'a été entrée pour le moment.")
+                continue
+
             while True:
                 try:
-                    num_cheval_input = input("Numéro du cheval à modifier (1-8) : ").strip()
+                    num_cheval_input = input(f"Numéro du cheval à modifier (1-{nb_chevaux}) : ").strip()
                     num_cheval = int(num_cheval_input)
-                    if 1 <= num_cheval <= 8:
+                    if 1 <= num_cheval <= nb_chevaux:
                         break
                     else:
-                        print("Numéro de cheval invalide. Veuillez entrer un nombre entre 1 et 8.")
+                        print(f"Numéro de cheval invalide. Veuillez entrer un nombre entre 1 et {nb_chevaux}.")
                 except ValueError:
-                    print("Entrée invalide. Veuillez entrer un numéro entre 1 et 8.")
+                    print("Entrée invalide. Veuillez entrer un numéro.")
 
             while True:
                 try:
@@ -146,7 +164,11 @@ if __name__ == "__main__":
                     print("Entrée invalide. Veuillez entrer un nombre pour la cote.")
 
         elif choix == 'g':
-            while True:
+             if nb_chevaux == 0 and not premier_calcul: # Gérer le cas où il n'y a pas encore de chevaux mais on est en mode modification
+                 print("Veuillez d'abord entrer les cotes des chevaux.")
+                 continue
+             
+             while True:
                 try:
                     nouveau_gain_input = input("Nouveau gain cible souhaité : ").replace(',', '.')
                     nouveau_gain = float(nouveau_gain_input)
